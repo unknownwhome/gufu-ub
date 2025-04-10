@@ -3,8 +3,8 @@
 .vscode/
 .venv/
 venv/
-bot.session
-bot.session-journal
+gofu_session.session
+gofu_session.session-journal
 
 # Cache
 __pycache__/
