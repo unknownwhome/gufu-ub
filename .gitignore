@@ -1,0 +1,11 @@
+# Project
+.idea/
+.vscode/
+.venv/
+venv/
+bot.session
+bot.session-journal
+
+# Cache
+__pycache__/
+*.py[cod]
