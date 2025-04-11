@@ -7,3 +7,6 @@ __pycache__/
 *.py[cod]
 
 *.session
+
+config.json
+config_*.json
