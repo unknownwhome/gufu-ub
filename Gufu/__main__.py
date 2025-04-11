@@ -1,13 +1,13 @@
 import asyncio
 
-from core.userbot import UserBot, client
-from core.utils import load_modules
+from .core import UserBot, client, loader
+from .core.utils import register_and_load_modules
 
 
 async def main():
     userbot = UserBot(client)
     await userbot.start()
-    load_modules()
+    register_and_load_modules(loader)
     await userbot.run()
 
 if __name__ == "__main__":

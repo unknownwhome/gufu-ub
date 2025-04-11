@@ -1,9 +1,8 @@
-from core.loader import loader
-from core import utils
+from ..core import loader, utils
 
 class GufuHelp(loader.Module):
     @loader.command()
-    async def helpcmd(message):
+    async def helpcmd(self, message):
         module_names = [name for name, value in loader.modules.items() if value.get("type") == "module"]
         shown_count = len(module_names)
         hidden_count = 0

@@ -1,9 +1,9 @@
-# Project
-.idea/
-.vscode/
-.venv/
 venv/
+.venv/
 
-# Cache
+
 __pycache__/
+**/__pycache__/
 *.py[cod]
+
+*.session

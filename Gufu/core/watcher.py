@@ -1,7 +1,7 @@
 import functools
 
 from telethon import events
-from core.userbot import client
+from . import client
 
 class Watcher:
     def __init__(self):
