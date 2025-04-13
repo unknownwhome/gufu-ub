@@ -1,8 +1,11 @@
+import inspect
+
 from telethon import events
 
 from .client import client
 
 class Loader:
+    commands = {}
     modules = {}
 
     class Module:
@@ -12,14 +15,17 @@ class Loader:
     @staticmethod
     def is_module_loaded(command_name):
         for module_info in Loader.modules.values():
-            if module_info.get("type") == "module":
-                if command_name in module_info.get("commands", []):
-                    return True
+            if command_name in module_info.get("commands", []):
+                return True
         return False
 
-    def command(self, module_name=None, new=True, edited=True):
+    def command(self, new=True, edited=True):
         def decorator(func):
-            Loader.modules[func.__name__] = {"func": func, "type": "command", "module_name": module_name}
+            doc = inspect.getdoc(func)
+            Loader.commands[func.__name__] = {
+                "func": func, 
+                "description": doc if doc else None
+            }
             func_name_without_cmd = func.__name__.removesuffix('cmd')
             
             async def wrapper(event):
@@ -27,15 +33,13 @@ class Loader:
                 if command.endswith('cmd'):
                     return
                 
-                check_module_name = module_name if module_name else func_name_without_cmd
-                
-                if not Loader.is_module_loaded(check_module_name):
+                if not Loader.is_module_loaded(func_name_without_cmd):
                     return
                 
-                if hasattr(func, '__self__') or (func.__code__.co_argcount > 0 and func.__code__.co_varnames[0] == 'self'):
-                    await func(self, event)
-                else:
-                    await func(event)
+                if not (hasattr(func, '__self__') or (func.__code__.co_argcount > 0 and func.__code__.co_varnames[0] == 'self')):
+                    return
+                
+                await func(self, event)
             
             if func.__name__.endswith('cmd'):
                 if new:
@@ -44,5 +48,6 @@ class Loader:
                     client.add_event_handler(wrapper, events.MessageEdited(pattern=f"^\.{func_name_without_cmd}"))
             return func
         return decorator
+
 
 loader = Loader()

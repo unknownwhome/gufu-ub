@@ -5,6 +5,7 @@ import time
 class GofuPing(loader.Module):
     @loader.command()
     async def pingcmd(self, message):
+        """описание команды текст"""
         start_time = time.time()
         await message.edit("Проверка пинга...")
         end_time = time.time()

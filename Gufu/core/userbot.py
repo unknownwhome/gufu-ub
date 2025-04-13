@@ -1,5 +1,3 @@
-from .client import client
-
 class UserBot:
     def __init__(self, client):
         self.client = client
@@ -11,6 +9,3 @@ class UserBot:
         await self.start()
         await self.client.run_until_disconnected()
 
-async def main_userbot():
-    userbot = UserBot(client)
-    await userbot.run()
