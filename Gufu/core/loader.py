@@ -1,4 +1,3 @@
-# loader.py (updated)
 import inspect
 from telethon import events
 
