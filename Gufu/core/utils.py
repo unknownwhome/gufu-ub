@@ -4,6 +4,41 @@ import sys
 
 from .exceptions.modules import ModuleNotInheritedError
 
+def get_args_raw(message):
+    if not message.text:
+        return ""
+    
+    parts = message.text.split(maxsplit=1)
+    return parts[1] if len(parts) > 1 else ""
+
+
+def unload_module(loader, module_name: str) -> str:
+    if module_name in loader.userbot_modules:
+        return "❌ Нельзя удалить системный модуль"
+
+    module_info = loader.modules.get(module_name)
+    if not module_info:
+        return f"❌ Модуль <code>{module_name}</code> не найден среди загруженных модулей"
+
+    module_class = module_info.get("module")
+
+    full_module_name = module_class.__module__
+
+    spec = importlib.util.find_spec(full_module_name)
+    module_file_path = spec.origin
+
+    try:
+        os.remove(module_file_path)
+    except Exception as e:
+        return f"❌ Ошибка при удалении файла модуля: {e}"
+
+    if full_module_name in sys.modules:
+        del sys.modules[full_module_name]
+
+    del loader.modules[module_name]
+
+    return f"✅ Модуль <code>{module_name}</code> успешно удалён"
+
 def load_module(loader, module_path):
     try:
         module_name = os.path.basename(module_path)[:-3]
@@ -26,16 +61,16 @@ def load_module(loader, module_path):
             if isinstance(item, type) and issubclass(item, loader.Module):
                 try:
                     if _check_module(loader, item):
-                        _register_module(loader, item)
+                        _register_module(loader, item, is_userbot=False)
                         return True
                 except Exception as e:
-                    print(f"Ошибка при регистрации модуля {item.__name__}: {e}")
+                    print(f"❌ Ошибка при регистрации модуля {item.__name__}: {e}")
             elif isinstance(item, type):
                 raise ModuleNotInheritedError(module_name, item.__name__)
         
         return False
     except Exception as e:
-        print(f"Ошибка при загрузке модуля: {e}")
+        print(f"❌ Ошибка при загрузке модуля: {e}")
         return False
 
 def register_and_load_modules(loader):
@@ -49,24 +84,41 @@ def register_and_load_modules(loader):
     loaded_modules = []
 
     try:
-        for dir_path in [modules_dir, loaded_modules_dir]:
-            for filename in os.listdir(dir_path):
-                if filename.endswith(".py") and filename != "__init__.py":
-                    module_name = filename[:-3]
-                    full_module_name = f"{package_name}.{module_name}" if dir_path == modules_dir else f"{loaded_package_name}.{module_name}"
-                    try:
-                        module = importlib.import_module(full_module_name)
-                        
-                        for item_name in dir(module):
-                            item = getattr(module, item_name)
-                            if isinstance(item, type) and issubclass(item, loader.Module):
-                                try:
-                                    _register_module(loader, item)
-                                    loaded_modules.append(item.__name__)
-                                except Exception as e:
-                                    print(f"Ошибка при регистрации модуля {item.__name__}: {e}")
-                    except Exception as e:
-                        print(e)
+        for filename in os.listdir(modules_dir):
+            if filename.endswith(".py") and filename != "__init__.py":
+                module_name = filename[:-3]
+                full_module_name = f"{package_name}.{module_name}"
+                try:
+                    module = importlib.import_module(full_module_name)
+                    
+                    for item_name in dir(module):
+                        item = getattr(module, item_name)
+                        if isinstance(item, type) and issubclass(item, loader.Module):
+                            try:
+                                _register_module(loader, item, is_userbot=True)
+                                loaded_modules.append(item.__name__)
+                            except Exception as e:
+                                print(f"Ошибка при регистрации модуля {item.__name__}: {e}")
+                except Exception as e:
+                    print(e)
+        
+        for filename in os.listdir(loaded_modules_dir):
+            if filename.endswith(".py") and filename != "__init__.py":
+                module_name = filename[:-3]
+                full_module_name = f"{loaded_package_name}.{module_name}"
+                try:
+                    module = importlib.import_module(full_module_name)
+                    
+                    for item_name in dir(module):
+                        item = getattr(module, item_name)
+                        if isinstance(item, type) and issubclass(item, loader.Module):
+                            try:
+                                _register_module(loader, item, is_userbot=False)
+                                loaded_modules.append(item.__name__)
+                            except Exception as e:
+                                print(f"Ошибка при регистрации модуля {item.__name__}: {e}")
+                except Exception as e:
+                    print(e)
     except Exception as e:
         print(e)
 
@@ -90,15 +142,20 @@ def _check_module(loader, module):
     return True
 
 
-def _register_module(loader, module):
+def _register_module(loader, module, is_userbot=True):
     if _check_module(loader, module):
-        loader.modules[module.__name__] = {"module": module, "type": "module", "commands": []}
+        target_dict = loader.userbot_modules if is_userbot else loader.modules
+        target_dict[module.__name__] = {
+            "module": module, 
+            "type": "userbot_module" if is_userbot else "module", 
+            "commands": []
+        }
         
         commands = []
         for item_name in dir(module):
             item = getattr(module, item_name)
             if callable(item) and hasattr(item, '__name__') and item.__name__.endswith('cmd'):
-                loader.modules[module.__name__]["commands"].append(item.__name__.removesuffix('cmd'))
+                target_dict[module.__name__]["commands"].append(item.__name__.removesuffix('cmd'))
                 commands.append(f"{item.__name__.removesuffix('cmd')} | {item.__doc__ or 'Описание команды не найдено'}")
         
         return module.__name__, commands

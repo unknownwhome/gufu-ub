@@ -1,6 +1,5 @@
 import os
 from ..core import loader, utils
-from ..core.utils import load_module
 
 class LMModule(loader.Module):
     @loader.command()
@@ -42,11 +41,21 @@ class LMModule(loader.Module):
         
         if class_name in loader.modules:
             os.remove(file_path)
-            await utils.answer(message, f"Модуль {class_name} уже загружен")
+            await utils.answer(message, f"✅ Модуль <code>{class_name}</code> уже загружен")
             return
         
-        if load_module(loader, file_path):
-            await utils.answer(message, f"Модуль {class_name} успешно загружен и зарегистрирован")
+        if utils.load_module(loader, file_path):
+            await utils.answer(message, f"✅ Модуль <code>{class_name}</code> успешно загружен и зарегистрирован")
         else:
             os.remove(file_path)
-            await utils.answer(message, f"Ошибка при загрузке модуля {class_name}.")
+            await utils.answer(message, f"❌ Ошибка при загрузке модуля <code>{class_name}</code>")
+
+    @loader.command()
+    async def ulmcmd(self, message):
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, "❌ Укажите название модуля для удаления\nПример: <code>.ulmcmd ModuleName</code>")
+            return
+        
+        result = utils.unload_module(loader, args)
+        await utils.answer(message, result)

@@ -1,12 +1,13 @@
+# loader.py (updated)
 import inspect
-
 from telethon import events
 
 from .client import client
 
 class Loader:
-    commands = {}
+    userbot_modules = {}
     modules = {}
+    commands = {}
 
     class Module:
         def __init__(self):
@@ -14,7 +15,7 @@ class Loader:
 
     @staticmethod
     def is_module_loaded(command_name):
-        for module_info in Loader.modules.values():
+        for module_info in list(Loader.modules.values()) + list(Loader.userbot_modules.values()):
             if command_name in module_info.get("commands", []):
                 return True
         return False
@@ -48,6 +49,5 @@ class Loader:
                     client.add_event_handler(wrapper, events.MessageEdited(pattern=f"^\.{func_name_without_cmd}"))
             return func
         return decorator
-
 
 loader = Loader()
