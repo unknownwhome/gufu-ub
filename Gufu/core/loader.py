@@ -51,5 +51,4 @@ class Loader:
             return func
         return decorator
 
-
 loader = Loader()
