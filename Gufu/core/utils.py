@@ -37,7 +37,7 @@ def unload_module(loader, module_name: str) -> str:
 
     del loader.modules[module_name]
 
-    return f"✅ Модуль <code>{module_name}</code> успешно удалён"
+    return f"Модуль <code>{module_name}</code> успешно выгружен"
 
 def load_module(loader, module_path):
     try:
@@ -61,17 +61,17 @@ def load_module(loader, module_path):
             if isinstance(item, type) and issubclass(item, loader.Module):
                 try:
                     if _check_module(loader, item):
-                        _register_module(loader, item, is_userbot=False)
-                        return True
+                        return _register_module(loader, item, is_userbot=False)
                 except Exception as e:
                     print(f"❌ Ошибка при регистрации модуля {item.__name__}: {e}")
             elif isinstance(item, type):
                 raise ModuleNotInheritedError(module_name, item.__name__)
         
-        return False
+        return None, None
     except Exception as e:
         print(f"❌ Ошибка при загрузке модуля: {e}")
-        return False
+        return None, None
+
 
 def register_and_load_modules(loader):
     project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -145,21 +145,51 @@ def _check_module(loader, module):
 def _register_module(loader, module, is_userbot=True):
     if _check_module(loader, module):
         target_dict = loader.userbot_modules if is_userbot else loader.modules
+        instance = module()
+
         target_dict[module.__name__] = {
-            "module": module, 
-            "type": "userbot_module" if is_userbot else "module", 
+            "module": module,
+            "instance": instance,
+            "type": "userbot_module" if is_userbot else "module",
             "commands": []
         }
-        
+
         commands = []
         for item_name in dir(module):
             item = getattr(module, item_name)
             if callable(item) and hasattr(item, '__name__') and item.__name__.endswith('cmd'):
-                target_dict[module.__name__]["commands"].append(item.__name__.removesuffix('cmd'))
-                commands.append(f"{item.__name__.removesuffix('cmd')} | {item.__doc__ or 'Описание команды не найдено'}")
-        
+                cmd_name = item.__name__.removesuffix('cmd')
+                target_dict[module.__name__]["commands"].append(cmd_name)
+                if item.__doc__:
+                    commands.append(f"{cmd_name} | {item.__doc__}")
+                else:
+                    commands.append(f"{cmd_name}")
+
         return module.__name__, commands
     return None, None
 
+
+
 async def answer(message, text, parse_mode="HTML"):
-    await message.edit(text, parse_mode=parse_mode)
+    if isinstance(text, dict):
+        response_text = ""
+        for key, value in text.items():
+            response_text += f"<b>{key}: </b>{value}\n"
+        await message.edit(response_text, parse_mode=parse_mode)
+    else:
+        await message.edit(text, parse_mode=parse_mode)
+
+async def send_file(message, file, caption=None, parse_mode="HTML", **kwargs):
+    if isinstance(caption, dict):
+        response_text = ""
+        for key, value in caption.items():
+            response_text += f"<b>{key}: </b>{value}\n"
+        caption = response_text
+
+    await message.client.send_file(
+        message.chat_id,
+        file,
+        caption=caption,
+        parse_mode=parse_mode,
+        **kwargs
+    )
